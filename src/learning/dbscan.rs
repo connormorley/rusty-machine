@@ -115,7 +115,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
                     for cluster_point in cluster_data.row_iter() {
                         let point_distance =
                             utils::vec_bin_op(input_point.raw_slice(), cluster_point.raw_slice(), |x, y| x - y);
-                        distances.push(utils::dot(&point_distance, &point_distance).sqrt());
+                        distances.push(utils::dot(&point_distance, &point_distance));
                     }
 
                     let (closest_idx, closest_dist) = utils::argmin(&distances);
@@ -202,7 +202,7 @@ impl DBSCAN {
         for (idx, data_point) in inputs.row_iter().enumerate() {
             //TODO: Use `MatrixMetric` when rulinalg#154 is fixed.
             let point_distance = utils::vec_bin_op(data_point.raw_slice(), point.raw_slice(), |x, y| x - y);
-            let dist = utils::dot(&point_distance, &point_distance).sqrt();
+            let dist = utils::dot(&point_distance, &point_distance);
 
             if dist < self.eps {
                 in_neighbourhood.push(idx);

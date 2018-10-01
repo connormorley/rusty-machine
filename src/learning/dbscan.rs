@@ -198,6 +198,7 @@ impl DBSCAN {
         debug_assert!(point.cols() == inputs.cols(),
                       "point must be of same dimension as inputs");
 
+        let mut min_distance :f64 = 1000.0;
         let mut in_neighbourhood = Vec::new();
         for (idx, data_point) in inputs.row_iter().enumerate() {
             //TODO: Use `MatrixMetric` when rulinalg#154 is fixed.
@@ -206,8 +207,14 @@ impl DBSCAN {
 
             if dist < self.eps {
                 in_neighbourhood.push(idx);
+            } else if dist < min_distance {     //This is the value we want to extract and use as distancing rarity value, should work if i can channel it to Option results. 
+                min_distance = dist;
             }
         }
+        if min_distance == 1000.0{
+            min_distance = 0.0;
+        }
+        println!("The minimum distance from anomaly to cluster found is: {:?}", min_distance);
 
         in_neighbourhood
     }

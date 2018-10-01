@@ -177,6 +177,7 @@ impl DBSCAN {
         debug_assert!(neighbour_pts.iter().all(|x| *x < inputs.rows()),
                       "Neighbour indices too large for inputs");
 
+        println!("Cluster format: {:?}", self.clusters);
         self.clusters.as_mut().map(|x| x.mut_data()[point_idx] = Some(cluster));
 
         for data_point_idx in &neighbour_pts {
@@ -214,7 +215,7 @@ impl DBSCAN {
         if min_distance == 1000.0{
             min_distance = 0.0;
         }
-        println!("The minimum distance from anomaly to cluster found is: {:?}", min_distance);
+        //println!("The minimum distance from anomaly to cluster found is: {:?}", min_distance);
 
         in_neighbourhood
     }

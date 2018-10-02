@@ -80,7 +80,6 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
     fn train(&mut self, inputs: &Matrix<f64>) -> LearningResult<()> {
         self.init_params(inputs.rows());
         let mut cluster = 1;
-        let mut flag = false;
 
         for (idx, point) in inputs.row_iter().enumerate() {
             let visited = self._visited[idx];
@@ -93,13 +92,8 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
                 if neighbours.0.len() >= self.min_points {
                     self.expand_cluster(inputs, idx, neighbours.0, cluster);
                     cluster += 1;
-                    flag = true;
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, neighbours.1))});
-                    flag = true;
-                }
-                if! flag {
-                    println!("Error entry: {:?}", idx);
                 }
             }
         }
@@ -181,40 +175,33 @@ impl DBSCAN {
     fn expand_cluster(&mut self,
                       inputs: &Matrix<f64>,
                       point_idx: usize,
-                      neighbour_pts: Vec<(usize, f64)>,
+                      neighbour_pts: Vec<usize>,
                       cluster: usize) {
         debug_assert!(point_idx < inputs.rows(),
                       "Point index too large for inputs");
-        debug_assert!(neighbour_pts.iter().all(|x| x.0 < inputs.rows()),
+        debug_assert!(neighbour_pts.iter().all(|x| *x < inputs.rows()),
                       "Neighbour indices too large for inputs");
 
         self.clusters.as_mut().map(|x| x.mut_data()[point_idx] = Some((cluster, 0.0)));
 
-        let mut flag = false;
-
         for data_point_idx in &neighbour_pts {
-            let visited = self._visited[data_point_idx.0];
+            let visited = self._visited[*data_point_idx];
             if !visited {
-                self._visited[data_point_idx.0] = true;
-                let data_point_row = unsafe { inputs.row_unchecked(data_point_idx.0) };
+                self._visited[*data_point_idx] = true;
+                let data_point_row = unsafe { inputs.row_unchecked(*data_point_idx) };
                 let sub_neighbours = self.region_query(data_point_row, inputs);
 
                 if sub_neighbours.0.len() >= self.min_points {
-                    self.expand_cluster(inputs, data_point_idx.0, sub_neighbours.0, cluster);
-                    flag = true;
+                    self.expand_cluster(inputs, *data_point_idx, sub_neighbours.0, cluster);
                 } else {
-                    self.clusters.as_mut().map(|x| if x.mut_data()[point_idx].is_none() {x.mut_data()[point_idx] = Some((cluster, sub_neighbours.1))});
-                    flag = true;
-                }
-                if! flag{
-                    println!("Error entry: {:?}", point_idx);
+                    self.clusters.as_mut().map(|x| if x.mut_data()[point_idx].is_none() {x.mut_data()[point_idx] = Some((0, sub_neighbours.1))});
                 }
             }
         }
     }
 
 
-    fn region_query(&self, point: Row<f64>, inputs: &Matrix<f64>) -> (Vec<(usize, f64)>, f64) {
+    fn region_query(&self, point: Row<f64>, inputs: &Matrix<f64>) -> (Vec<usize>, f64) {
         debug_assert!(point.cols() == inputs.cols(),
                       "point must be of same dimension as inputs");
 
@@ -226,7 +213,7 @@ impl DBSCAN {
             let dist = utils::dot(&point_distance, &point_distance);
 
             if dist < self.eps {
-                in_neighbourhood.push((idx, 0.0));
+                in_neighbourhood.push(idx);
             } else if dist < min_distance {
                 min_distance = dist;
             }

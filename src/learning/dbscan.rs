@@ -80,6 +80,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
     fn train(&mut self, inputs: &Matrix<f64>) -> LearningResult<()> {
         self.init_params(inputs.rows());
         let mut cluster = 1;
+        let mut flag = false;
 
         for (idx, point) in inputs.row_iter().enumerate() {
             let visited = self._visited[idx];
@@ -92,8 +93,13 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
                 if neighbours.0.len() >= self.min_points {
                     self.expand_cluster(inputs, idx, neighbours.0, cluster);
                     cluster += 1;
+                    flag = true;
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, neighbours.1))});
+                    flag = true;
+                }
+                if! flag {
+                    println!("Error entry: {:?}", idx);
                 }
             }
         }
@@ -184,6 +190,8 @@ impl DBSCAN {
 
         self.clusters.as_mut().map(|x| x.mut_data()[point_idx] = Some((cluster, 0.0)));
 
+        let mut flag = false;
+
         for data_point_idx in &neighbour_pts {
             let visited = self._visited[data_point_idx.0];
             if !visited {
@@ -193,8 +201,13 @@ impl DBSCAN {
 
                 if sub_neighbours.0.len() >= self.min_points {
                     self.expand_cluster(inputs, data_point_idx.0, sub_neighbours.0, cluster);
+                    flag = true;
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[point_idx].is_none() {x.mut_data()[point_idx] = Some((cluster, sub_neighbours.1))});
+                    flag = true;
+                }
+                if! flag{
+                    println!("Error entry: {:?}", point_idx);
                 }
             }
         }

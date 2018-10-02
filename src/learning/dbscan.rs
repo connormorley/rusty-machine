@@ -51,7 +51,7 @@ use rulinalg::matrix::Row;
 pub struct DBSCAN {
     eps: f64,
     min_points: usize,
-    clusters: Option<Vector<Option<usize>>>,
+    clusters: Option<Vector<Option<(usize, f64)>>>,
     predictive: bool,
     _visited: Vec<bool>,
     _cluster_data: Option<Matrix<f64>>,
@@ -79,7 +79,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
     /// Train the classifier using input data.
     fn train(&mut self, inputs: &Matrix<f64>) -> LearningResult<()> {
         self.init_params(inputs.rows());
-        let mut cluster = 0;
+        let mut cluster = 1;
 
         for (idx, point) in inputs.row_iter().enumerate() {
             let visited = self._visited[idx];
@@ -89,9 +89,11 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
 
                 let neighbours = self.region_query(point, inputs);
 
-                if neighbours.len() >= self.min_points {
-                    self.expand_cluster(inputs, idx, neighbours, cluster);
+                if neighbours.0.len() >= self.min_points {
+                    self.expand_cluster(inputs, idx, neighbours.0, cluster);
                     cluster += 1;
+                } else {
+                    self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, neighbours.1))});
                 }
             }
         }
@@ -120,7 +122,8 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
 
                     let (closest_idx, closest_dist) = utils::argmin(&distances);
                     if closest_dist < self.eps {
-                        classes.push(clusters[closest_idx]);
+                        let cluster = clusters[closest_idx];
+                        classes.push(Some(cluster.unwrap().0));
                     } else {
                         classes.push(None);
                     }
@@ -134,7 +137,9 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
             Err(Error::new(ErrorKind::InvalidState,
                            "Model must be set to predictive. Use `self.set_predictive(true)`."))
         }
+
     }
+    
 }
 
 impl DBSCAN {
@@ -163,39 +168,40 @@ impl DBSCAN {
     }
 
     /// Return an Option pointing to the model clusters.
-    pub fn clusters(&self) -> Option<&Vector<Option<usize>>> {
+    pub fn clusters(&self) -> Option<&Vector<Option<(usize, f64)>>> {
         self.clusters.as_ref()
     }
 
     fn expand_cluster(&mut self,
                       inputs: &Matrix<f64>,
                       point_idx: usize,
-                      neighbour_pts: Vec<usize>,
+                      neighbour_pts: Vec<(usize, f64)>,
                       cluster: usize) {
         debug_assert!(point_idx < inputs.rows(),
                       "Point index too large for inputs");
-        debug_assert!(neighbour_pts.iter().all(|x| *x < inputs.rows()),
+        debug_assert!(neighbour_pts.iter().all(|x| x.0 < inputs.rows()),
                       "Neighbour indices too large for inputs");
 
-        println!("Cluster format: {:?}", self.clusters);
-        self.clusters.as_mut().map(|x| x.mut_data()[point_idx] = Some(cluster));
+        self.clusters.as_mut().map(|x| x.mut_data()[point_idx] = Some((cluster, 0.0)));
 
         for data_point_idx in &neighbour_pts {
-            let visited = self._visited[*data_point_idx];
+            let visited = self._visited[data_point_idx.0];
             if !visited {
-                self._visited[*data_point_idx] = true;
-                let data_point_row = unsafe { inputs.row_unchecked(*data_point_idx) };
+                self._visited[data_point_idx.0] = true;
+                let data_point_row = unsafe { inputs.row_unchecked(data_point_idx.0) };
                 let sub_neighbours = self.region_query(data_point_row, inputs);
 
-                if sub_neighbours.len() >= self.min_points {
-                    self.expand_cluster(inputs, *data_point_idx, sub_neighbours, cluster);
+                if sub_neighbours.0.len() >= self.min_points {
+                    self.expand_cluster(inputs, data_point_idx.0, sub_neighbours.0, cluster);
+                } else {
+                    self.clusters.as_mut().map(|x| if x.mut_data()[point_idx].is_none() {x.mut_data()[point_idx] = Some((cluster, sub_neighbours.1))});
                 }
             }
         }
     }
 
 
-    fn region_query(&self, point: Row<f64>, inputs: &Matrix<f64>) -> Vec<usize> {
+    fn region_query(&self, point: Row<f64>, inputs: &Matrix<f64>) -> (Vec<(usize, f64)>, f64) {
         debug_assert!(point.cols() == inputs.cols(),
                       "point must be of same dimension as inputs");
 
@@ -207,17 +213,18 @@ impl DBSCAN {
             let dist = utils::dot(&point_distance, &point_distance);
 
             if dist < self.eps {
-                in_neighbourhood.push(idx);
-            } else if dist < min_distance {     //This is the value we want to extract and use as distancing rarity value, should work if i can channel it to Option results. 
+                in_neighbourhood.push((idx, 0.0));
+            } else if dist < min_distance {
                 min_distance = dist;
             }
         }
-        if min_distance == 1000.0{
-            min_distance = 0.0;
-        }
+
+        //if min_distance == 1000.0{
+        //    min_distance = 0.0;
+        //}
         //println!("The minimum distance from anomaly to cluster found is: {:?}", min_distance);
 
-        in_neighbourhood
+        return (in_neighbourhood, min_distance);
     }
 
     fn init_params(&mut self, total_points: usize) {

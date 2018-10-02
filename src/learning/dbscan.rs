@@ -194,7 +194,7 @@ impl DBSCAN {
                 if sub_neighbours.0.len() >= self.min_points {
                     self.expand_cluster(inputs, *data_point_idx, sub_neighbours.0, cluster);
                 } else {
-                    self.clusters.as_mut().map(|x| if x.mut_data()[point_idx].is_none() {x.mut_data()[point_idx] = Some((0, sub_neighbours.1))});
+                    self.clusters.as_mut().map(|x| if x.mut_data()[*data_point_idx].is_none() {x.mut_data()[*data_point_idx] = Some((0, sub_neighbours.1))});
                 }
             }
         }

@@ -80,6 +80,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
     fn train(&mut self, inputs: &Matrix<f64>) -> LearningResult<()> {
         self.init_params(inputs.rows());
         let mut cluster = 1;
+        let mut anomalies_index: Vec<usize> = vec!{}; //This is hacky and inelegant but trying to do it via self.clusters causes many a borrowing issue, this is the noddy way around
 
         for (idx, point) in inputs.row_iter().enumerate() {
             let visited = self._visited[idx];
@@ -94,17 +95,16 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
                     cluster += 1;
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, neighbours.1))});
+                    anomalies_index.push(idx);
                 }
             }
         }
 
-        for (idx, cluster) in self.clusters.unwrap().iter().enumerate() {
-            if cluster.unwrap().0 == 0{ //Only if the cluster has been identified as anomalous run the test.
-                println!("Original distance: {:?}", cluster.unwrap().1);
-                let anomaly_distance = self.anomalous_distance_to_cluster(inputs.row(idx), inputs);
-                println!("New distance: {:?}", anomaly_distance);
-                self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, anomaly_distance))});
-            }
+        for a_idx in anomalies_index{
+            println!("old distance: {:?}", self.clusters.as_mut().map(|x| x.mut_data()[a_idx]));
+            let anomalous_distance = self.anomalous_distance_to_cluster(inputs.row(a_idx), inputs);
+            println!("new distance: {:?}", anomalous_distance);
+            self.clusters.as_mut().map(|x| x.mut_data()[a_idx] = Some((0, anomalous_distance)));
         }
 
         if self.predictive {
@@ -215,9 +215,6 @@ impl DBSCAN {
 
         let mut min_distance :f64 = 1000.0;
         for (idx, data_point) in inputs.row_iter().enumerate() {
-            if self.clusters.unwrap()[idx].unwrap().0 == 0 {      // If the indexed datapoint is an anomaly, skip comparison
-                continue;
-            }
             let point_distance = utils::vec_bin_op(data_point.raw_slice(), point.raw_slice(), |x, y| x - y);
             let dist = utils::dot(&point_distance, &point_distance);
 

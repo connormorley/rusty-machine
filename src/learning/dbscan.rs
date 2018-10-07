@@ -100,13 +100,14 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
             }
         }
 
+        /*
         for a_idx in anomalies_index{
             //println!("old distance: {:?}", self.clusters.as_mut().map(|x| x.mut_data()[a_idx]));
             let anomalous_distance = self.anomalous_distance_to_cluster(inputs.row(a_idx), inputs);
             //println!("new distance: {:?}", anomalous_distance);
             self.clusters.as_mut().map(|x| x.mut_data()[a_idx] = Some((0, anomalous_distance)));
         }
-
+        */
         if self.predictive {
             self._cluster_data = Some(inputs.clone());
         }

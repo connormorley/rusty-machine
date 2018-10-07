@@ -284,7 +284,7 @@ mod tests {
         let row = m.row(0);
         let neighbours = model.region_query(row, &inputs);
 
-        assert!(neighbours.len() == 2);
+        assert!(neighbours.0.len() == 2);
     }
 
     #[test]
@@ -297,6 +297,6 @@ mod tests {
         let row = m.row(0);
         let neighbours = model.region_query(row, &inputs);
 
-        assert!(neighbours.len() == 1);
+        assert!(neighbours.0.len() == 1);
     }
 }

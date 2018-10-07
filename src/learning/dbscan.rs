@@ -215,6 +215,9 @@ impl DBSCAN {
 
         let mut min_distance :f64 = 1000.0;
         for (idx, data_point) in inputs.row_iter().enumerate() {
+            if self.clusters.as_ref().unwrap()[idx].unwrap().0 == 0{ //If the datapoint is anomalous, skip comparison
+                continue;
+            }
             let point_distance = utils::vec_bin_op(data_point.raw_slice(), point.raw_slice(), |x, y| x - y);
             let dist = utils::dot(&point_distance, &point_distance);
 

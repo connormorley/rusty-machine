@@ -98,6 +98,15 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
             }
         }
 
+        for (idx, cluster) in self.clusters.unwrap().iter().enumerate() {
+            if cluster.unwrap().0 == 0{ //Only if the cluster has been identified as anomalous run the test.
+                println!("Original distance: {:?}", cluster.unwrap().1);
+                let anomaly_distance = self.anomalous_distance_to_cluster(inputs.row(idx), inputs);
+                println!("New distance: {:?}", anomaly_distance);
+                self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, anomaly_distance))});
+            }
+        }
+
         if self.predictive {
             self._cluster_data = Some(inputs.clone());
         }
@@ -200,6 +209,24 @@ impl DBSCAN {
         }
     }
 
+    fn anomalous_distance_to_cluster(&self, point: Row<f64>, inputs: &Matrix<f64>) -> (f64) {
+        debug_assert!(point.cols() == inputs.cols(),
+                      "point must be of same dimension as inputs");
+
+        let mut min_distance :f64 = 1000.0;
+        for (idx, data_point) in inputs.row_iter().enumerate() {
+            if self.clusters.unwrap()[idx].unwrap().0 == 0 {      // If the indexed datapoint is an anomaly, skip comparison
+                continue;
+            }
+            let point_distance = utils::vec_bin_op(data_point.raw_slice(), point.raw_slice(), |x, y| x - y);
+            let dist = utils::dot(&point_distance, &point_distance);
+
+            if dist < min_distance {
+                min_distance = dist;
+            } 
+        }
+        return min_distance;
+    }
 
     fn region_query(&self, point: Row<f64>, inputs: &Matrix<f64>) -> (Vec<usize>, f64) {
         debug_assert!(point.cols() == inputs.cols(),

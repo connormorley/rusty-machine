@@ -52,6 +52,7 @@ pub struct DBSCAN {
     eps: f64,
     min_points: usize,
     clusters: Option<Vector<Option<(usize, f64)>>>,
+    anomalies_index: Vec<usize>,
     predictive: bool,
     _visited: Vec<bool>,
     _cluster_data: Option<Matrix<f64>>,
@@ -68,6 +69,7 @@ impl Default for DBSCAN {
             eps: 0.5,
             min_points: 5,
             clusters: None,
+            anomalies_index: Vec::new(),
             predictive: false,
             _visited: Vec::new(),
             _cluster_data: None,
@@ -95,7 +97,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
                     cluster += 1;
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[idx].is_none() {x.mut_data()[idx] = Some((0, neighbours.1))});
-                    anomalies_index.push(idx);
+                    self.anomalies_index.push(idx);
                 }
             }
         }
@@ -163,6 +165,7 @@ impl DBSCAN {
             eps: eps,
             min_points: min_points,
             clusters: None,
+            anomalies_index: Vec::new(),
             predictive: false,
             _visited: Vec::new(),
             _cluster_data: None,
@@ -206,6 +209,7 @@ impl DBSCAN {
                     self.expand_cluster(inputs, *data_point_idx, sub_neighbours.0, cluster);
                 } else {
                     self.clusters.as_mut().map(|x| if x.mut_data()[*data_point_idx].is_none() {x.mut_data()[*data_point_idx] = Some((0, sub_neighbours.1))});
+                    self.anomalies_index.push(*data_point_idx);
                 }
             }
         }

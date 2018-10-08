@@ -82,7 +82,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
     fn train(&mut self, inputs: &Matrix<f64>) -> LearningResult<()> {
         self.init_params(inputs.rows());
         let mut cluster = 1;
-        let mut anomalies_index: Vec<usize> = vec!{}; //This is hacky and inelegant but trying to do it via self.clusters causes many a borrowing issue, this is the noddy way around
+        //let mut anomalies_index: Vec<usize> = vec!{}; //This is hacky and inelegant but trying to do it via self.clusters causes many a borrowing issue, this is the noddy way around
 
         for (idx, point) in inputs.row_iter().enumerate() {
             let visited = self._visited[idx];
@@ -102,13 +102,15 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
             }
         }
 
-        println!("number of datapoints: {:?},   number of anomalies: {:?}", inputs.rows(), anomalies_index.len());
+        println!("number of datapoints: {:?},   number of anomalies: {:?}", inputs.rows(), self.anomalies_index.len());
 
-        for a_idx in anomalies_index{
+        //let a_index = *self.anomalies_index;
+
+        for a_idx in &self.anomalies_index{
             //println!("old distance: {:?}", self.clusters.as_mut().map(|x| x.mut_data()[a_idx]));
-            let anomalous_distance = self.anomalous_distance_to_cluster(inputs.row(a_idx), inputs);
+            let anomalous_distance = self.anomalous_distance_to_cluster(inputs.row(*a_idx), inputs);
             //println!("new distance: {:?}", anomalous_distance);
-            self.clusters.as_mut().map(|x| x.mut_data()[a_idx] = Some((0, anomalous_distance)));
+            self.clusters.as_mut().map(|x| x.mut_data()[*a_idx] = Some((0, anomalous_distance)));
         }
         
         if self.predictive {

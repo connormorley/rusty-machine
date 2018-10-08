@@ -102,7 +102,7 @@ impl UnSupModel<Matrix<f64>, Vector<Option<usize>>> for DBSCAN {
             }
         }
 
-        println!("number of datapoints: {:?},   number of anomalies: {:?}", inputs.rows(), self.anomalies_index.len());
+        //println!("number of datapoints: {:?},   number of anomalies: {:?}", inputs.rows(), self.anomalies_index.len());
 
         //let a_index = *self.anomalies_index;
 
